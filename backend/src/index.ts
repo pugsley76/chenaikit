@@ -15,7 +15,6 @@ import { requestLoggingMiddleware } from './middleware/logging';
 import healthRouter from './routes/health';
 import { metricsService, metricsMiddleware } from './services/metricsService';
 import { validateEnvironment, initializeMonitoring, shutdownMonitoring } from './config/monitoring';
-import { UserPayload } from './types/auth';
 import { ensureRedisConnection } from './config/redis';
 import { detectVersion, versionHeaders, createVersionRouter } from './middleware/versioning';
 import v1Router from './routes/v1';
@@ -101,7 +100,7 @@ export const startServer = async (): Promise<void> => {
   const apiKeyService = new ApiKeyService(prisma);
   const usageTrackingService = new UsageTrackingService(prisma);
   const rateLimiter = createTieredRateLimiter(redis);
-  const apiGateway = new ApiGateway(apiKeyService, usageTrackingService, rateLimiter);
+  new ApiGateway(apiKeyService, usageTrackingService, rateLimiter);
 
   // registerGatewayRoutes(apiGateway, apiKeyService, usageTrackingService);
 
@@ -122,24 +121,23 @@ export const startServer = async (): Promise<void> => {
   process.on('SIGINT', shutdown);
   process.on('SIGTERM', shutdown);
 
-  const server = app.listen(PORT, async () => {
-    console.log(`🚀 ChenAIKit Backend running on port ${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`📈 Metrics:       http://localhost:${PORT}/metrics`);
-    console.log(`📋 See .github/ISSUE_TEMPLATE/ for backend development tasks`);
+  app.listen(PORT, async () => {
+    log.info(`ChenAIKit Backend running on port ${PORT}`);
+    log.info(`Health check: http://localhost:${PORT}/api/health`);
+    log.info(`Metrics:      http://localhost:${PORT}/metrics`);
 
     try {
       await ensureRedisConnection();
-      console.log('🧠 Redis cache ready');
+      log.info('Redis cache ready');
     } catch (_err) {
-      console.warn('⚠️  Redis not available. Continuing without cache.');
+      log.warn('Redis not available. Continuing without cache.');
     }
   });
 };
 
 if (require.main === module) {
   startServer().catch((error) => {
-    console.error('Failed to start server', error);
+    log.error('Failed to start server', error as Error);
     process.exit(1);
   });
 }
