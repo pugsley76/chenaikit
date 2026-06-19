@@ -12,6 +12,7 @@ import accountRoutes from '../accounts';
 import authRoutes from '../auth';
 import { createFeatureFlagRouter } from '../featureFlags';
 import { generateCreditScore, generateFraudResult, toCreditScoreV2, toFraudResultV2 } from '../shared/scoring';
+import { generalRateLimit } from '../middleware/rateLimiter';
 
 const router: ExpressRouter = Router();
 
@@ -20,12 +21,12 @@ router.use('/auth', authRoutes);
 router.use('/feature-flags', createFeatureFlagRouter());
 
 // GET /credit-score - nested v2 contract
-router.get('/credit-score', (_req, res) => {
+router.get('/credit-score', generalRateLimit.middleware(), (_req, res) => {
   res.json({ success: true, data: toCreditScoreV2(generateCreditScore()) });
 });
 
 // GET /fraud/detect - nested v2 contract
-router.get('/fraud/detect', (_req, res) => {
+router.get('/fraud/detect', generalRateLimit.middleware(), (_req, res) => {
   res.json({ success: true, data: toFraudResultV2(generateFraudResult()) });
 });
 

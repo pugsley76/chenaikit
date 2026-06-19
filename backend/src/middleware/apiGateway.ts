@@ -220,9 +220,12 @@ export class ApiGateway {
         // Path rewriting
         if (options.pathRewrite) {
           for (const [pattern, replacement] of Object.entries(options.pathRewrite)) {
-            const regex = new RegExp(pattern);
-            if (regex.test(req.path)) {
-              const newPath = req.path.replace(regex, replacement);
+            // Patterns must be fixed strings — avoid new RegExp(callerSuppliedString)
+            // which is a ReDoS vector (CodeQL: user-controlled regex).
+            // Rewrite keys are developer-defined (not user input), but we
+            // enforce a safe literal prefix-strip here to keep it explicit.
+            if (req.path.startsWith(pattern)) {
+              const newPath = replacement + req.path.slice(pattern.length);
               req.url = newPath + (req.url.includes('?') ? '?' + req.url.split('?')[1] : '');
               break;
             }
