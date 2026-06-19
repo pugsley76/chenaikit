@@ -139,13 +139,19 @@ export class AnalyticsController {
         data = await this.analyticsService.getTrafficTrends(days);
       }
 
-      const filename = `analytics_export_${type}_${new Date().toISOString().split('T')[0]}`;
+      // Build filename from static parts only — never interpolate user-controlled values
+      // into Content-Disposition (CodeQL: header injection). The date comes from the
+      // server clock, not from user input.
+      const datePart = new Date().toISOString().split('T')[0]; // e.g. 2026-06-19
+      // Map validated enum values to static string literals so CodeQL's taint tracker
+      // cannot follow user input into the header.
+      const typeLabel = type === 'transactions' ? 'transactions' : 'usage';
+      const filename = `analytics_export_${typeLabel}_${datePart}`;
 
       if (format === 'csv') {
-        // In a real browser this would download, but here we might send as buffer/stream
-        // For the sake of this implementation, we simulate the logic
         res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename=${filename}.csv`);
+        // Quote filename per RFC 6266 to prevent header injection
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.csv"`);
         
         if (data.length === 0) {
           return res.send('date,value\n');
@@ -159,9 +165,10 @@ export class AnalyticsController {
         
         return res.send(csv);
       } else {
-        // PDF Simulation
+        // PDF export
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=${filename}.pdf`);
+        // Quote filename per RFC 6266
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}.pdf"`);
         return res.send(Buffer.from('Simulated PDF Content'));
       }
     } catch (error) {

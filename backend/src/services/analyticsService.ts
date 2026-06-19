@@ -163,12 +163,18 @@ export class AnalyticsService {
    * Get traffic trends for forecasting
    */
   async getTrafficTrends(days: number = 30): Promise<TrendPoint[]> {
+    // Calculate the cutoff timestamp in JS and pass it as a bound parameter
+    // instead of interpolating `days` into the SQL string — avoids the
+    // string-concatenation injection pattern CodeQL flags on $queryRaw.
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+
     const results = await this.prisma.$queryRaw<RawTrendResult[]>`
       SELECT 
         DATE(timestamp) as date,
         COUNT(*) as count
       FROM api_usage
-      WHERE timestamp >= date('now', '-' || ${days} || ' days')
+      WHERE timestamp >= ${cutoff}
       GROUP BY DATE(timestamp)
       ORDER BY date ASC
     `;
