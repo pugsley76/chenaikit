@@ -62,6 +62,7 @@ jobs:
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: test-secret-key
           NODE_ENV: test
+          STELLAR_USE_MOCK: "true"
         run: |
           cd tests/integration
           pnpm test -- --coverage

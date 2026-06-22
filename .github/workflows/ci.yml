@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ main, develop ]
 
+env:
+  PRISMA_HIDE_UPDATE_MESSAGE: "1"
+
 jobs:
   # ---------------------------------------------------------------------------
   # Security scanning: dependency vulnerability audit + CodeQL static analysis.
@@ -125,9 +128,56 @@ jobs:
     - name: Generate Prisma Client
       run: cd backend && pnpm prisma:generate
 
+    - name: Run database migrations
+      run: cd backend && pnpm prisma:migrate
+      env:
+        DATABASE_URL: file:./prisma/test.db
+
+    - name: Start backend server
+      run: |
+        cd backend
+        nohup pnpm start > /tmp/backend.log 2>&1 &
+        echo $! > /tmp/backend.pid
+        # Wait until health endpoint responds (up to 30 s)
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
+            echo "Backend ready after ${i}s"
+            exit 0
+          fi
+          sleep 1
+        done
+        echo "Backend did not start in time. Logs:" && cat /tmp/backend.log
+        exit 1
+      env:
+        NODE_ENV: test
+        PORT: 3000
+        DATABASE_URL: file:./prisma/test.db
+        ACCESS_TOKEN_SECRET: ci-test-access-secret
+        REFRESH_TOKEN_SECRET: ci-test-refresh-secret
+        REDIS_URL: ""
+
     - name: Run integration tests
       run: pnpm run test:integration
-      
+      env:
+        NODE_ENV: test
+        STELLAR_USE_MOCK: "true"
+        API_URL: http://localhost:3000
+
+    - name: Stop backend server
+      if: always()
+      run: |
+        if [ -f /tmp/backend.pid ]; then
+          kill $(cat /tmp/backend.pid) || true
+        fi
+
+    - name: Upload backend logs on failure
+      if: failure()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: backend-logs
+        path: /tmp/backend.log
+        retention-days: 7
+
     - name: Upload integration test results
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
       if: always()

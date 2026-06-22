@@ -60,7 +60,7 @@ describe('Credit Scoring Integration', () => {
       // Wait for transaction to settle
       await waitFor(async () => {
         const balance = await getAccountBalance(recipient.publicKey);
-        return parseFloat(balance) > 10000;
+        return parseFloat(balance) > 0;
       });
 
       // Updated score

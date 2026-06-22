@@ -10,6 +10,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "jest",
+    "type-check": "tsc --noEmit",
     "lint": "eslint src/**/*.ts",
     "clean": "rm -rf dist"
   },

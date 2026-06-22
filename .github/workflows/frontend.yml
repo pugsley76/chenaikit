@@ -16,6 +16,9 @@ on:
       - 'frontend/**'
       - 'packages/core/**'
 
+env:
+  PRISMA_HIDE_UPDATE_MESSAGE: "1"
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
