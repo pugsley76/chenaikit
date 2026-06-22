@@ -42,7 +42,7 @@ export class AdvancedRateLimiter {
     if (apiKey) {
       return `api_key:${apiKey.id}`;
     }
-    return `ip:${req.ip || req.connection.remoteAddress || 'unknown'}`;
+    return `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`;
   }
 
   /**
@@ -257,7 +257,7 @@ export class AdvancedRateLimiter {
    */
   ipRateLimitMiddleware(limit: number, windowMs: number) {
     return this.middlewareWithOptions({
-      keyGenerator: (req: Request) => `ip:${req.ip || req.connection.remoteAddress || 'unknown'}`,
+      keyGenerator: (req: Request) => `ip:${req.ip || req.socket.remoteAddress || 'unknown'}`,
       customLimit: { limit, windowMs },
     });
   }
@@ -312,7 +312,6 @@ export class AdvancedRateLimiter {
           return;
         }
 
-        next();
         next();
       } catch (error) {
         log.error('Rate limiter middleware error', error as Error);
